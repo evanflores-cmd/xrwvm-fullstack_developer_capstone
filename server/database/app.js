@@ -2,21 +2,44 @@ const express = require('express');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const  cors = require('cors')
+const bodyParser = require('body-parser');
+const ObjectId = mongoose.Types.ObjectId;
+
+
 const app = express()
 const port = 3030;
 
 app.use(cors())
 app.use(require('body-parser').urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 const reviews_data = JSON.parse(fs.readFileSync("reviews.json", 'utf8'));
 const dealerships_data = JSON.parse(fs.readFileSync("dealerships.json", 'utf8'));
 
-mongoose.connect("mongodb://mongo_db:27017/",{'dbName':'dealershipsDB'});
+mongoose.connect("mongodb://mongo_db:27017/", { dbName: 'dealershipsDB' })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
 
 
 const Reviews = require('./review');
 
 const Dealerships = require('./dealership');
+
+
+async function loadData() {
+  try {
+    await Reviews.deleteMany({});
+    await Reviews.insertMany(reviews_data['reviews']);
+
+    await Dealerships.deleteMany({});
+    await Dealerships.insertMany(dealerships_data['dealerships']);
+
+    console.log('Data loaded successfully');
+  } catch (error) {
+    console.error('Error loading data:', error);
+  }
+}
+loadData();
 
 try {
   Reviews.deleteMany({}).then(()=>{
@@ -57,18 +80,49 @@ app.get('/fetchReviews/dealer/:id', async (req, res) => {
 });
 
 // Express route to fetch all dealerships
-app.get('/fetchDealers', async (req, res) => {
-//Write your code here
-});
+app.get('/fetchDealer/:id', async (req, res) => {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid dealer ID format' });
+    }
+    try {
+      const dealer = await Dealership.findById(id);
+      if (dealer) {
+        res.status(200).json(dealer);
+      } else {
+        res.status(404).json({ message: 'Dealer not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
 // Express route to fetch Dealers by a particular state
 app.get('/fetchDealers/:state', async (req, res) => {
-//Write your code here
+    app.get('/fetchDealers/:state', async (req, res) => {
+        const state = req.params.state;
+        try {
+          const dealers = await Dealerships.find({ state: state });
+          res.status(200).json(dealers);
+        } catch (error) {
+          res.status(500).json({ error: error.message });
+        }
+    })
 });
 
 // Express route to fetch dealer by a particular id
 app.get('/fetchDealer/:id', async (req, res) => {
-//Write your code here
+    const id = req.params.id;
+    try {
+      const dealer = await Dealerships.findById(id);
+      if (dealer) {
+        res.status(200).json(dealer);
+      } else {
+        res.status(404).json({ message: 'Dealer not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
 });
 
 //Express route to insert review
