@@ -24,6 +24,7 @@ mongoose.connect("mongodb://mongo_db:27017/", { dbName: 'dealershipsDB' })
 const Reviews = require('./review');
 
 const Dealerships = require('./dealership');
+const dealership = require('./dealership');
 
 
 async function loadData() {
@@ -80,13 +81,32 @@ app.get('/fetchReviews/dealer/:id', async (req, res) => {
 });
 
 // Express route to fetch all dealerships
+// Express route to fetch all dealerships
+app.get('/fetchDealers', async (req, res) => {
+    try {
+      const dealerships = await Dealerships.find();
+      res.status(200).json(dealerships);
+    } catch (error) {
+      res.status(500).json({ error: 'Error fetching dealerships' });
+    }
+  });
+
+// Express route to fetch Dealers by a particular state
+app.get('/fetchDealers/:state', async (req, res) => {
+        const state = req.params.state;
+        try {
+          const dealers = await Dealerships.find({ state: state });
+          res.status(200).json(dealers);
+        } catch (error) {
+          res.status(500).json({ error: error.message });
+        }
+    });
+
+// Express route to fetch dealer by a particular id
 app.get('/fetchDealer/:id', async (req, res) => {
     const id = req.params.id;
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid dealer ID format' });
-    }
     try {
-      const dealer = await Dealership.findById(id);
+      const dealer = await Dealerships.findOne({ id: id }); // or dealerId: id
       if (dealer) {
         res.status(200).json(dealer);
       } else {
@@ -96,34 +116,6 @@ app.get('/fetchDealer/:id', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
-
-// Express route to fetch Dealers by a particular state
-app.get('/fetchDealers/:state', async (req, res) => {
-    app.get('/fetchDealers/:state', async (req, res) => {
-        const state = req.params.state;
-        try {
-          const dealers = await Dealerships.find({ state: state });
-          res.status(200).json(dealers);
-        } catch (error) {
-          res.status(500).json({ error: error.message });
-        }
-    })
-});
-
-// Express route to fetch dealer by a particular id
-app.get('/fetchDealer/:id', async (req, res) => {
-    const id = req.params.id;
-    try {
-      const dealer = await Dealerships.findById(id);
-      if (dealer) {
-        res.status(200).json(dealer);
-      } else {
-        res.status(404).json({ message: 'Dealer not found' });
-      }
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-});
 
 //Express route to insert review
 app.post('/insert_review', express.raw({ type: '*/*' }), async (req, res) => {
